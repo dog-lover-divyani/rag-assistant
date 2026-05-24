@@ -59,8 +59,9 @@ GEMINI_API_KEY=AIzaSyYourActualCopiedKeyStringHere
 Spin up Vercel's local cloud simulation environment:
 vercel dev
 
-**Open your browser and navigate to 👉 *http://localhost:3000***
 ---
+**Open your browser and navigate to 👉 *http://localhost:3000***
+
 # 🛡️ Overcoming Engineering Challenges
 During development, several platform integration hurdles were solved:
 
@@ -69,5 +70,6 @@ Vercel 4.5MB Serverless Payload Limits: Replaced traditional heavy backend binar
 Google SDK Routing Upgrades: Swapped fluctuating SDK libraries for a clean, stable native web fetch routing pipeline directed straight at Google’s production v1beta/models/gemini-2.5-flash API endpoint cluster.
 
 💼 Developed with ❤️ by Divyani Nigam as a production-grade showcase project.
+
 ---
 ## 🔗 LINK FOR THE WEBSITE - https://rag-assistant-iota-mocha.vercel.app/
