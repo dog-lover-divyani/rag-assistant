@@ -58,9 +58,9 @@ GEMINI_API_KEY=AIzaSyYourActualCopiedKeyStringHere
 **4. Run the Local Development Server**
 Spin up Vercel's local cloud simulation environment:
 vercel dev
----
-**Open your browser and navigate to 👉 *http://localhost:3000***
 
+**Open your browser and navigate to 👉 *http://localhost:3000***
+---
 # 🛡️ Overcoming Engineering Challenges
 During development, several platform integration hurdles were solved:
 
