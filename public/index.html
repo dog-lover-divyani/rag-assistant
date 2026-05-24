@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise AI RAG Assistant</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="workspace">
+        <!-- Sidebar for file upload -->
+        <aside class="sidebar">
+            <h2>Knowledge Base</h2>
+            <p class="subtitle">Upload documentation to context-train your assistant.</p>
+            
+            <div class="upload-zone" id="dropZone">
+                <input type="file" id="fileInput" accept=".pdf,.txt" hidden>
+                <div class="zone-content">
+                    <span class="icon">📁</span>
+                    <p>Drag & drop PDF/TXT here or <strong>browse</strong></p>
+                </div>
+            </div>
+            
+            <div id="fileList" class="file-list"></div>
+        </aside>
+
+        <!-- Main chat interaction panel -->
+        <main class="chat-panel">
+            <header class="chat-header">
+                <h1>RAG Assistant Workspace</h1>
+                <span class="status-badge disconnected" id="statusBadge">No Context</span>
+            </header>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="message system">
+                    Welcome. Please upload a reference document in the sidebar to begin querying context-aware data.
+                </div>
+            </div>
+
+            <form class="chat-input-area" id="chatForm">
+                <input type="text" id="queryInput" placeholder="Ask a question about your documents..." disabled required>
+                <button type="submit" id="sendBtn" disabled>Query</button>
+            </form>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
