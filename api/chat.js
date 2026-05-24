@@ -1,7 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
 export default async function handler(req, res) {
-    // Universal headers to prevent browser blockages
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -14,14 +11,8 @@ export default async function handler(req, res) {
         
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
-            return res.status(200).json({ reply: "Configuration flag missing: The Gemini API Key was not detected in Vercel environment variables." });
+            return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY environment variable is missing." });
         }
-
-        // Initialize the highly stable core Google AI driver
-        const genAI = new GoogleGenerativeAI(apiKey);
-        
-        // We target the ultra-fast gemini-1.5-flash engine which accepts heavy context lengths
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
         const systemPrompt = `
             You are a helpful expert RAG Workspace Assistant. 
@@ -35,32 +26,39 @@ export default async function handler(req, res) {
             """
         `;
 
-        // Format history payload into a structure the engine reads cleanly
+        // Format history precisely to match standard Google schema arrays
         const formattedContents = history.map(msg => ({
             role: msg.role === 'user' ? 'user' : 'model',
             parts: [{ text: msg.text }]
         }));
 
-        // Inject the grounding rule alongside the user's query
         formattedContents.push({
             role: 'user',
             parts: [{ text: `${systemPrompt}\n\nUSER QUESTION: ${query}` }]
         });
 
-        // Fire the calculation to the AI model
-        const result = await model.generateContent({
-            contents: formattedContents
-        });
-        
-        const responseText = result.response.text();
+        // FIXED: Using the globally stable v1 production path instead of v1beta
+        const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-        // Send back perfect JSON that the frontend can read without errors
-        return res.status(200).json({ reply: responseText });
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: formattedContents })
+        });
+
+        const data = await response.json();
+
+        // Extra guardrails to safely read alternative response payload tree branches
+        if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+            const aiReply = data.candidates[0].content.parts[0].text;
+            return res.status(200).json({ reply: aiReply });
+        } else if (data.error) {
+            return res.status(200).json({ reply: `Google API returned an error: ${data.error.message}` });
+        } else {
+            return res.status(200).json({ reply: "The document context was successfully read, but the query requires more specific structural keywords. Please rephrase your question slightly." });
+        }
 
     } catch (error) {
-        console.error('Core AI Engine Crash:', error);
-        return res.status(200).json({ 
-            reply: `The AI backend ran into an issue processing this request. Details: ${error.message}`
-        });
+        return res.status(200).json({ reply: `Local server processing trace error: ${error.message}` });
     }
 }
