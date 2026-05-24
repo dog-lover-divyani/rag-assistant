@@ -26,7 +26,6 @@ export default async function handler(req, res) {
             """
         `;
 
-        // Format history precisely to match standard Google schema arrays
         const formattedContents = history.map(msg => ({
             role: msg.role === 'user' ? 'user' : 'model',
             parts: [{ text: msg.text }]
@@ -37,8 +36,8 @@ export default async function handler(req, res) {
             parts: [{ text: `${systemPrompt}\n\nUSER QUESTION: ${query}` }]
         });
 
-        // FIXED: Using the globally stable v1 production path instead of v1beta
-        const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        // The exact URL Google requires for gemini-1.5-flash
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -48,14 +47,13 @@ export default async function handler(req, res) {
 
         const data = await response.json();
 
-        // Extra guardrails to safely read alternative response payload tree branches
         if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
             const aiReply = data.candidates[0].content.parts[0].text;
             return res.status(200).json({ reply: aiReply });
         } else if (data.error) {
             return res.status(200).json({ reply: `Google API returned an error: ${data.error.message}` });
         } else {
-            return res.status(200).json({ reply: "The document context was successfully read, but the query requires more specific structural keywords. Please rephrase your question slightly." });
+            return res.status(200).json({ reply: "The document context was successfully read, but Gemini returned an unexpected data structure. Try rephrasing your question slightly." });
         }
 
     } catch (error) {
