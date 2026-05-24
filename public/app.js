@@ -32,69 +32,62 @@ function handleFile(file) {
     }
 
     const reader = new FileReader();
-    
-    // Read directly as a Text string first for lightning-fast client processing fallback
-    reader.onload = async function () {
-        appendMessage('system', `Syncing knowledge base layers for "${file.name}"...`);
-        
-        let clientExtractedText = "";
-        try {
-            // Instantly strip basic unreadable characters directly in the browser
-            clientExtractedText = reader.result
-                .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, "")
-                .replace(/\s+/g, ' ')
-                .trim();
-        } catch (err) {
-            clientExtractedText = "";
-        }
+    appendMessage('system', `Syncing knowledge base layers for "${file.name}"...`);
 
-        // Base64 conversion to send to our backend API pipeline
-        const base64Data = btoa(unescape(encodeURIComponent(reader.result.substring(0, 50000))));
+    if (file.type === 'text/plain') {
+        // Simple processing for plain text documents
+        reader.onload = function () {
+            uploadedDocumentText = reader.result;
+            activateWorkspaceContext(file.name);
+        };
+        reader.readAsText(file);
+    } else if (file.type === 'application/pdf') {
+        // High-precision browser parsing for PDF layout streams
+        reader.onload = async function () {
+            try {
+                const typedarray = new Uint8Array(reader.result);
+                
+                // Point PDFJS to its cloud worker thread setup
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+                
+                const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                let fullExtractedText = "";
 
-        try {
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fileData: base64Data, fileName: file.name, fileType: file.type })
-            });
-            
-            // Safe JSON validation check to prevent "Unexpected end of JSON input" forever
-            const responseText = await response.text();
-            let data = { text: clientExtractedText }; // fallback value
-            
-            if (responseText) {
-                try {
-                    data = JSON.parse(responseText);
-                } catch(e) {
-                    console.log("Using client-side backup parser.");
+                // Loop over every single page to pull text out neatly
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    fullExtractedText += pageText + "\n";
                 }
-            }
 
-            // Lock context into our running application memory state
-            uploadedDocumentText = data.text || clientExtractedText || "Active training document context synced.";
-            
-            // Visual indicators updating cleanly
-            statusBadge.className = "status-badge connected";
-            statusBadge.textContent = "Context Active";
-            fileList.innerHTML = `<div class="file-item"><span>📄 ${file.name}</span>✅</div>`;
-            queryInput.disabled = false;
-            sendBtn.disabled = false;
-            queryInput.placeholder = "Ask a question about this document...";
-            
-            appendMessage('system', `Success! Context established with "${file.name}". You can now query your assistant.`);
-        } catch (err) {
-            // Robust automatic fallback operation
-            uploadedDocumentText = clientExtractedText || "Document metadata synced.";
-            statusBadge.className = "status-badge connected";
-            statusBadge.textContent = "Context Active (Local)";
-            fileList.innerHTML = `<div class="file-item"><span>📄 ${file.name}</span>✅</div>`;
-            queryInput.disabled = false;
-            sendBtn.disabled = false;
-            appendMessage('system', `Context uploaded via client engine optimization.`);
-        }
-    };
+                uploadedDocumentText = fullExtractedText.replace(/\s+/g, ' ').trim();
+
+                if (uploadedDocumentText.length < 10) {
+                    throw new Error("No selectable text vectors detected in this layout document.");
+                }
+
+                activateWorkspaceContext(file.name);
+
+            } catch (err) {
+                console.error("PDF extraction malfunction:", err);
+                appendMessage('system', `Parsing failure: Unable to capture visible fonts. Ensure the file layer isn't a scanned image layout.`);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+}
+
+// Helper function to update your workspace UI states neatly
+function activateWorkspaceContext(fileName) {
+    statusBadge.className = "status-badge connected";
+    statusBadge.textContent = "Context Active";
+    fileList.innerHTML = `<div class="file-item"><span>📄 ${fileName}</span>✅</div>`;
+    queryInput.disabled = false;
+    sendBtn.disabled = false;
+    queryInput.placeholder = "Ask a question about this document...";
     
-    reader.readAsText(file);
+    appendMessage('system', `Success! High-fidelity context established with "${fileName}". Ask away!`);
 }
 
 // Manage message submission loops
