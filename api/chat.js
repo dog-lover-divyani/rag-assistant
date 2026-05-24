@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 
 export default async function handler(req, res) {
+    // Set CORS headers so the browser accepts the communication pipeline cleanly
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -11,44 +12,52 @@ export default async function handler(req, res) {
     try {
         const { query, documentContext, history } = req.body;
         
-        // Load API Key safely on server-side from Environment Variables
         const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) return res.status(500).json({ error: 'Gemini API Key missing on server environment configuration.' });
+        if (!apiKey) {
+            return res.status(200).json({ error: 'Gemini API environment credential configuration missing.' });
+        }
 
+        // Initialize the official Google GenAI Client
         const ai = new GoogleGenAI({ apiKey });
 
-        // Build system prompt instructions containing the uploaded document text data
-        const systemInstruction = `
-            You are a helpful expert RAG Assistant. 
-            You must answer the user's question using ONLY the provided reference text.
-            If the answer cannot be confidently formulated from the reference text, explain that you don't have that specific context.
-            Always keep your tone professional, concise, and scannable.
-            
-            REFERENCE CONTEXT:
+        const promptText = `
+            You are an expert workspace assistant. You must answer the following user query accurately using ONLY the attached training context.
+            If the answer cannot be formulated from the context, politely state that the information isn't available within the document.
+
+            DOCUMENT CONTEXT:
             """
             ${documentContext}
             """
         `;
 
-        // Format chat log history accurately for the API
+        // Format history according to the latest content specifications
         const contents = history.map(msg => ({
             role: msg.role === 'user' ? 'user' : 'model',
             parts: [{ text: msg.text }]
         }));
 
-        // Append current incoming query text
-        contents.push({ role: 'user', parts: [{ text: query }] });
+        // Append the new query prompt alongside the grounding instructions
+        contents.push({ 
+            role: 'user', 
+            parts: [{ text: `${promptText}\n\nUSER QUERY: ${query}` }] 
+        });
 
         // Trigger Google's high-efficiency Gemini Flash model
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: contents,
-            config: { systemInstruction }
+            contents: contents
         });
 
-        return res.status(200).json({ reply: response.text });
+        // Ensure we extract and return the raw output text string cleanly
+        const responseText = response.text || "I was unable to process a text stream summary.";
+
+        return res.status(200).json({ reply: responseText, error: null });
+
     } catch (error) {
-        console.error('Chat Error:', error);
-        return res.status(500).json({ error: 'Error generating response from AI model.' });
+        console.error('Gemini Execution Failure:', error);
+        return res.status(200).json({ 
+            reply: "The AI module ran into an execution error. Please verify your Gemini API key restrictions or network limits.",
+            error: error.message 
+        });
     }
 }
