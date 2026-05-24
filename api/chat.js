@@ -1,7 +1,7 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export default async function handler(req, res) {
-    // Set CORS headers so the browser accepts the communication pipeline cleanly
+    // Universal headers to prevent browser blockages
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -14,50 +14,53 @@ export default async function handler(req, res) {
         
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
-            return res.status(200).json({ error: 'Gemini API environment credential configuration missing.' });
+            return res.status(200).json({ reply: "Configuration flag missing: The Gemini API Key was not detected in Vercel environment variables." });
         }
 
-        // Initialize the official Google GenAI Client
-        const ai = new GoogleGenAI({ apiKey });
+        // Initialize the highly stable core Google AI driver
+        const genAI = new GoogleGenerativeAI(apiKey);
+        
+        // We target the ultra-fast gemini-1.5-flash engine which accepts heavy context lengths
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-        const promptText = `
-            You are an expert workspace assistant. You must answer the following user query accurately using ONLY the attached training context.
-            If the answer cannot be formulated from the context, politely state that the information isn't available within the document.
+        const systemPrompt = `
+            You are a helpful expert RAG Workspace Assistant. 
+            You must answer the user's question using ONLY the provided reference text.
+            If the answer cannot be formulated from this text, explain nicely that you don't have that context.
+            Keep your answers concise, clean, and scannable.
 
-            DOCUMENT CONTEXT:
+            REFERENCE DOCUMENT TEXT:
             """
             ${documentContext}
             """
         `;
 
-        // Format history according to the latest content specifications
-        const contents = history.map(msg => ({
+        // Format history payload into a structure the engine reads cleanly
+        const formattedContents = history.map(msg => ({
             role: msg.role === 'user' ? 'user' : 'model',
             parts: [{ text: msg.text }]
         }));
 
-        // Append the new query prompt alongside the grounding instructions
-        contents.push({ 
-            role: 'user', 
-            parts: [{ text: `${promptText}\n\nUSER QUERY: ${query}` }] 
+        // Inject the grounding rule alongside the user's query
+        formattedContents.push({
+            role: 'user',
+            parts: [{ text: `${systemPrompt}\n\nUSER QUESTION: ${query}` }]
         });
 
-        // Trigger Google's high-efficiency Gemini Flash model
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: contents
+        // Fire the calculation to the AI model
+        const result = await model.generateContent({
+            contents: formattedContents
         });
+        
+        const responseText = result.response.text();
 
-        // Ensure we extract and return the raw output text string cleanly
-        const responseText = response.text || "I was unable to process a text stream summary.";
-
-        return res.status(200).json({ reply: responseText, error: null });
+        // Send back perfect JSON that the frontend can read without errors
+        return res.status(200).json({ reply: responseText });
 
     } catch (error) {
-        console.error('Gemini Execution Failure:', error);
+        console.error('Core AI Engine Crash:', error);
         return res.status(200).json({ 
-            reply: "The AI module ran into an execution error. Please verify your Gemini API key restrictions or network limits.",
-            error: error.message 
+            reply: `The AI backend ran into an issue processing this request. Details: ${error.message}`
         });
     }
 }
