@@ -47,18 +47,23 @@ rag-assistant/
 Ensure you have Node.js installed on your system.
 
 **2. Clone and Install Dependencies**
+
+```text
 git clone [https://github.com/your-username/rag-assistant.git](https://github.com/your-username/rag-assistant.git)
 cd rag-assistant
 npm install -g vercel
-
+```
 **3. Setup Your Local Environment Key**
 Create a .env file in the main root directory of the project and insert your Google AI Studio API key:
+```text
 GEMINI_API_KEY=AIzaSyYourActualCopiedKeyStringHere
+```
 
 **4. Run the Local Development Server**
 Spin up Vercel's local cloud simulation environment:
+```text
 vercel dev
-
+```
 **Open your browser and navigate to 👉 *http://localhost:3000***
 
 ---
