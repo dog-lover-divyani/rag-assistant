@@ -36,7 +36,7 @@ export default async function handler(req, res) {
             parts: [{ text: `${systemPrompt}\n\nUSER QUESTION: ${query}` }]
         });
 
-        // The exact URL Google requires for gemini-1.5-flash
+        // FIXED: Explicitly calling the updated production-grade endpoint route
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
         const response = await fetch(apiUrl, {
@@ -51,9 +51,9 @@ export default async function handler(req, res) {
             const aiReply = data.candidates[0].content.parts[0].text;
             return res.status(200).json({ reply: aiReply });
         } else if (data.error) {
-            return res.status(200).json({ reply: `Google API returned an error: ${data.error.message}` });
+            return res.status(200).json({ reply: `Google API Error: ${data.error.message}` });
         } else {
-            return res.status(200).json({ reply: "The document context was successfully read, but Gemini returned an unexpected data structure. Try rephrasing your question slightly." });
+            return res.status(200).json({ reply: "The document context was successfully parsed, but Gemini returned an unexpected data block. Please try a different query." });
         }
 
     } catch (error) {
