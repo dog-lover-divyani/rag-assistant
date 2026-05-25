@@ -78,4 +78,4 @@ Google SDK Routing Upgrades: Swapped fluctuating SDK libraries for a clean, stab
 💼 Developed with ❤️ by Divyani Nigam as a production-grade showcase project.
 
 ---
-## 🔗 LINK FOR THE WEBSITE - https://rag-assistant-iota-mocha.vercel.app/
+## 🔗 LINK FOR THE WEBSITE - https://rag-assistant-flax.vercel.app/
